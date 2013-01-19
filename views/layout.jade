@@ -1,8 +1,32 @@
-doctype 5
+!!! 5
 html
   head
     title= title
     link(rel='stylesheet', href='/css/bootstrap.css')
+    script(src='http://code.jquery.com/jquery-latest.js')
     script(src='/js/bootstrap.js')
   body
-    block content
+    block navigationbar
+      .navbar.navbar-fixed-top.navbar-inverse
+        .navbar-inner
+          .container
+            a.brand(href="#") LanguageOfLanguages
+            
+            ul.nav
+              li.active 
+                a(href="#") Home
+              li
+                a(href="#") About
+              li
+                a(href="#") Contact
+
+            form.navbar-form.pull-right
+              input.span2(type="text", placeholder="Email")
+              input.span2(type="password", placeholder="Password")
+              button.btn(type="submit") Log in
+
+    .container
+      block content
+      
+      hr
+      footer © Company 2013
