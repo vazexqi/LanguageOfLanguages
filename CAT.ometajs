@@ -1,0 +1,175 @@
+ometa CAT {
+
+language = 
+    languageName ("(" languageName ")")? "," "written" "in" languageName "." definitions _ EOF,
+
+languageName = LoLsName,
+
+definitions = 
+    definition ("." definition)* "."?,
+
+definition =  
+    conceptName _ (~seq('::=') ~seq('::->') seq('::') context)? "::=" (parsing | projectingOnly),
+    
+conceptName =
+      LoLsName    			
+    | "_",					
+
+context =                        //TEMP: pass through characters to host language
+    (~seq('::') Character)*,
+
+parsing = parsingPattern ("->" languageElementExpression ("-->" projectingPattern)? "---")?,
+
+projectingOnly = '->' languageElementExpression "-->" projectingPattern "---",
+
+parsingPattern = 
+    unorderedChoice,
+	
+languageElementExpression =      //TEMP: pass through characters to host language
+    (~seq('-->') ~seq('---') Character)*,
+
+projectingPattern =              //TEMP: pass through characters to host language
+    (~seq('---') Character)*,
+
+unorderedChoice =                //Currently the same as ordered choice
+    orderedChoice ("|" orderedChoice)*,
+
+orderedChoice = 
+    alternative ("/" alternative)*,
+	
+alternative =
+      mustFollow 
+    | mustNotFollow
+    | phrase,
+
+mustFollow =
+    phrase "-/" phrase,
+
+mustNotFollow =
+    phrase "~/" phrase,
+
+phrase = 
+      intersection
+    | exclusion
+    | sequence,
+
+intersection = 
+    sequence ("&" sequence)+,
+
+exclusion = 
+    sequence "~" sequence,
+
+sequence =
+    term+,
+
+term = 
+      assignment
+    | Action
+    | Predicate
+    | regularExpression
+    | primary,
+
+assignment =
+    term ":" VariableName,
+
+regularExpression =
+      primary ":" Number "-" Number 
+    | primary ":" Number "-" "*" 
+    | primary ":" Number  
+    | primary "?"
+    | primary "*" 
+    | primary "+", 
+
+primary = 
+      groupedPattern
+    | repeatedGroup
+    | nameReference
+    | terminal,
+
+groupedPattern =
+    "(" parsingPattern  ")",				
+
+repeatedGroup =
+      "[" parsingPattern  "]"				
+    | "[" parsingPattern  "]*"				
+    | "{" parsingPattern  "}"
+    | "[" parsingPattern  "]+"				
+    | "{" parsingPattern  "}+",				
+
+nameReference = 
+      "<" LoLsName ">"			
+    | RuleName
+    | "_",			
+
+terminal = 
+      String
+    | TokenString
+    | CharacterRange
+    | SingleCharacter,
+
+// Tokens
+LoLsName = _
+    Letter (embeddedSpace | embeddedUnderscore | Letter | Digit)*,
+RuleName = _
+    Letter (embeddedUnderscore | Letter | Digit)*,
+
+VariableName = _ 
+    LowercaseLetter (Letter | Digit)*,
+
+Number = _
+    Digit+,
+
+String = _ 
+    '\'' (~'\'' Character)* '\'',
+TokenString = _
+    '"' (~'"' Character)* '"',
+SingleCharacter = _ (
+      '\\' decimalNumber  						
+    | seq('\\x') hexNumber2
+    | seq('\\u') hexNumber4
+    | '\\' Character),
+CharacterRange = _ (
+      '\\' decimalNumber '-' decimalNumber	
+    | seq('\\x') hexNumber2 '-' hexNumber2	
+    | seq('\\u') hexNumber4 '-' hexNumber4		
+    | '\\' Character '-' Character),
+
+Action = _
+    seq('-<') (~seq('>-') Character)* seq('>-'),
+Predicate = _
+    seq('-?') (~seq('?-') Character)* seq('?-'),
+
+//Syntax rules for Tokens
+embeddedSpace =
+    ' ' (Letter | Digit),
+embeddedUnderscore =
+    '_' (Letter | Digit),
+decimalNumber =
+    Digit Digit Digit?, 				
+hexNumber2 =
+    hexDigit hexDigit,					
+hexNumber4 =
+    hexDigit hexDigit hexDigit hexDigit,			
+hexDigit =
+    Digit | 'A' | 'B' | 'C' | 'D' | 'E' | 'F', // /A-F
+
+// Ignored Syntax
+spaces = _, // ".." calls token() which calls spaces and then matches string
+_ = 	(whitespace | comment)*,
+whitespace = 
+    Separator+,
+comment =
+    blockComment | lineComment,
+blockComment =
+    seq('/*') (comment | ~seq('*/') Character)* seq('*/'),
+lineComment =
+    seq('//') (~Newline Character)* (Newline | EOF),
+// default definitions for EOF, Separator, Character, Newline, Digit, Letter, LowercaseLetter
+EOF = end,
+Separator = space, // character code <= 32 which is a space 
+Character = char,
+Newline = char:c ?(c.charCodeAt(0) == 13 || c.charCodeAt(0) == 10), // Cr or Lf
+Digit = digit,
+Letter = letter,
+LowercaseLetter = lower
+}
